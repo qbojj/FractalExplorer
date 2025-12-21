@@ -1,0 +1,49 @@
+# Build directories
+build/
+cmake-build-*/
+bin/
+obj/
+
+# Compiled files
+*.o
+*.out
+*.exe
+*.so
+*.a
+
+# CUDA compiled files
+*.ptx
+*.cubin
+*.fatbin
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Output files
+output/
+screenshots/
+*.png
+*.jpg
+*.mp4
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Logs
+*.log
+
+# Python (if used for tooling)
+__pycache__/
+*.pyc
+venv/
+.env
