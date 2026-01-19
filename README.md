@@ -4,17 +4,17 @@ Real-time GPU-accelerated fractal visualization using CUDA and ray marching with
 
 **This is a CUDA implementation inspired by PySpace's fractal ray marching approach.**
 
-## 🎯 Features
+## Features
 
-- ✅ **Real-time CUDA Ray Marching** - 60+ FPS at 1280x720
-- ✅ **Multiple Fractal Types** - Mandelbox, Menger Sponge, Sierpinski, Tree Planet
-- ✅ **Smooth Fractal Morphing** - Interpolate between fractals in real-time
-- ✅ **Auto-Cycle Mode** - Automatically transition through all fractals
-- ✅ **Interactive Camera** - WASD movement, mouse look
-- ✅ **Sphere Tracing Algorithm** - Efficient distance field rendering
-- ✅ **Dynamic Lighting** - Phong shading with shadows and glow effects
+- **Real-time CUDA Ray Marching** - 60+ FPS at 1280x720
+- **Multiple Fractal Types** - Mandelbox, Menger Sponge, Sierpinski, Tree Planet
+- **Smooth Fractal Morphing** - Interpolate between fractals in real-time
+- **Auto-Cycle Mode** - Automatically transition through all fractals
+- **Interactive Camera** - WASD movement, mouse look
+- **Sphere Tracing Algorithm** - Efficient distance field rendering
+- **Dynamic Lighting** - Phong shading with shadows and glow effects
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -44,7 +44,7 @@ chmod +x build.sh
 ./build/fractal-explorer 1920 1080
 ```
 
-## 🎮 Controls
+## Controls
 
 ### Movement
 - **WASD** - Move camera forward/left/backward/right
@@ -63,7 +63,7 @@ chmod +x build.sh
 - **-** - Decrease morph speed
 - **ESC** - Exit
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
@@ -80,7 +80,7 @@ include/
 └── window.h              # Window interface
 ```
 
-## 🔬 Implemented Fractals
+## Implemented Fractals
 
 ### Mandelbox (Type 0)
 Box and sphere folding iterations creating complex cubic structures.
@@ -102,7 +102,7 @@ Hybrid fractal combining rotation, abs, and Menger folds.
 - **Parameters**: scale=1.3, iterations=30
 - **Best for**: Organic tree-like structures
 
-## 🛠️ Technical Details
+## Technical Details
 
 ### Ray Marching Algorithm
 
@@ -136,7 +136,7 @@ Fractals are generated through iterated transformations:
 - **Max Ray Steps**: 128
 - **Speedup vs CPU**: ~100-200x
 
-## 📊 Future Extensions
+## Future Extensions
 
 - [ ] Parameter interpolation system
 - [ ] World mutation engine
@@ -145,18 +145,12 @@ Fractals are generated through iterated transformations:
 - [ ] Screenshot/video recording
 - [ ] Collision detection for gameplay mechanics
 
-## 📚 References
+## References
 
 - PySpace (HackerPoet) - Original GLSL implementation inspiration
 - Hart, J.C. (1996) - "Sphere Tracing" paper
 - Quilez, I. - Distance function library and techniques
 
-## 📄 License
+## License
 
 MIT License - See LICENSE file for details
-
----
-
-**Author**: Kuba  
-**Year**: 2026  
-**Courses**: GPGPU in CUDA, Procedural Content Generation
