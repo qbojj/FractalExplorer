@@ -53,9 +53,9 @@ FractalExplorer::FractalExplorer(int w, int h)
     
     // Initialize fractal parameters for Mandelbox
     fractalParams.type = 0;
-    fractalParams.iterations = 15;
-    fractalParams.scale = 2.0f;
-    fractalParams.minRadius = 0.5f;
+    fractalParams.iterations = 12;
+    fractalParams.scale = 2.5f;
+    fractalParams.minRadius = 0.25f;
     fractalParams.maxRadius = 1.0f;
     fractalParams.foldRadius = make_float3(1.0f, 1.0f, 1.0f);
     fractalParams.offset = make_float3(0.0f, 0.0f, 0.0f);
@@ -63,13 +63,13 @@ FractalExplorer::FractalExplorer(int w, int h)
     fractalParams.colorOrbit = make_float3(1.0f, 1.0f, 1.0f);
     fractalParams.morphFactor = 0.0f;
     fractalParams.targetType = 0;
-    fractalParams.targetScale = 2.0f;
-    fractalParams.targetIterations = 15;
+    fractalParams.targetScale = 2.5f;
+    fractalParams.targetIterations = 12;
     
     // Initialize rendering parameters
-    renderParams.maxSteps = 128;
+    renderParams.maxSteps = 512;
     renderParams.maxDist = 50.0f;
-    renderParams.epsilon = 0.001f;
+    renderParams.epsilon = 1e-3f;
     renderParams.lightDir = normalize(make_float3(0.5f, 1.0f, 0.3f));
     renderParams.backgroundColor = make_float3(0.05f, 0.05f, 0.1f);
     renderParams.ambientStrength = 0.2f;
@@ -134,6 +134,43 @@ void FractalExplorer::switchFractal(int type) {
     if (type == currentFractalType) return;
     
     currentFractalType = type;
+    fractalParams.type = type;
+    isMorphing = false;
+    
+    // Set base parameters for this fractal type
+    switch (type) {
+        case 0: // Mandelbox
+            fractalParams.iterations = 12;
+            fractalParams.scale = 2.5f;
+            fractalParams.minRadius = 0.25f;
+            fractalParams.maxRadius = 1.0f;
+            fractalParams.foldRadius = make_float3(1.0f, 1.0f, 1.0f);
+            std::cout << "Switched to Mandelbox" << std::endl;
+            break;
+            
+        case 1: // Menger
+            fractalParams.iterations = 5;
+            fractalParams.scale = 3.0f;
+            std::cout << "Switched to Menger Sponge" << std::endl;
+            break;
+            
+        case 2: // Sierpinski
+            fractalParams.iterations = 9;
+            fractalParams.scale = 2.4f;
+            std::cout << "Switched to Sierpinski Tetrahedron" << std::endl;
+            break;
+            
+        case 3: // Tree Planet
+            fractalParams.iterations = 30;
+            fractalParams.scale = 1.3f;
+            fractalParams.offset = make_float3(-2.0f, -4.8f, 0.0f);
+            fractalParams.rotationAngle = 0.44f;
+            std::cout << "Switched to Tree Planet" << std::endl;
+            break;
+    }
+    
+    // Reset morph to start new parameter exploration
+    fractalParams.morphFactor = 0.0f;
     startMorphTo(type);
 }
 
@@ -142,37 +179,42 @@ void FractalExplorer::startMorphTo(int targetType) {
     sourceParams = fractalParams;
     sourceParams.morphFactor = 0.0f;
     
-    // Set target parameters
+    // Set target parameters - vary parameters within the same fractal type
     targetParams = fractalParams;
-    targetParams.type = targetType;
     targetParams.morphFactor = 1.0f;
     
     switch (targetType) {
-        case 0: // Mandelbox
-            targetParams.iterations = 15;
-            targetParams.scale = 2.0f;
-            targetParams.minRadius = 0.5f;
-            targetParams.maxRadius = 1.0f;
-            targetParams.foldRadius = make_float3(1.0f, 1.0f, 1.0f);
-            std::cout << "Morphing to Mandelbox" << std::endl;
+        case 0: // Mandelbox - vary scale and radii
+            targetParams.iterations = 12;
+            targetParams.scale = 3.0f + sinf((float)window.getTime() * 0.3f) * 0.5f;
+            targetParams.minRadius = 0.15f + cosf((float)window.getTime() * 0.4f) * 0.1f;
+            targetParams.maxRadius = 0.8f + sinf((float)window.getTime() * 0.5f) * 0.3f;
+            targetParams.foldRadius = make_float3(
+                0.8f + sinf((float)window.getTime() * 0.2f) * 0.3f,
+                0.8f + cosf((float)window.getTime() * 0.25f) * 0.3f,
+                0.8f + sinf((float)window.getTime() * 0.3f) * 0.3f
+            );
             break;
             
-        case 1: // Menger
-            targetParams.iterations = 8;
-            targetParams.scale = 3.0f;
-            std::cout << "Morphing to Menger Sponge" << std::endl;
+        case 1: // Menger - vary scale/iterations for spacing
+            targetParams.iterations = 4 + (int)(sinf((float)window.getTime() * 0.18f) * 2.0f);
+            targetParams.scale = 2.6f + cosf((float)window.getTime() * 0.22f) * 0.6f;
             break;
             
-        case 2: // Sierpinski
-            targetParams.iterations = 10;
-            targetParams.scale = 2.0f;
-            std::cout << "Morphing to Sierpinski Tetrahedron" << std::endl;
+        case 2: // Sierpinski - vary iterations and scale for air gaps
+            targetParams.iterations = 7 + (int)(sinf((float)window.getTime() * 0.3f) * 4.0f);
+            targetParams.scale = 2.2f + cosf((float)window.getTime() * 0.32f) * 0.45f;
             break;
             
-        case 3: // Tree Planet
-            targetParams.iterations = 30;
-            targetParams.scale = 1.3f;
-            std::cout << "Morphing to Tree Planet" << std::endl;
+        case 3: // Tree Planet - closer to PySpace recipe
+            targetParams.iterations = 24 + (int)(sinf((float)window.getTime() * 0.22f) * 6.0f);
+            targetParams.scale = 1.25f + cosf((float)window.getTime() * 0.18f) * 0.15f;
+            targetParams.rotationAngle = 0.44f + sinf((float)window.getTime() * 0.35f) * 0.05f;
+            targetParams.offset = make_float3(
+                -2.0f + cosf((float)window.getTime() * 0.17f) * 0.2f,
+                -4.8f + sinf((float)window.getTime() * 0.19f) * 0.4f,
+                0.0f
+            );
             break;
     }
     
@@ -184,13 +226,13 @@ void FractalExplorer::startMorphTo(int targetType) {
 }
 
 void FractalExplorer::updateInterpolation(float deltaTime) {
-    // Auto-cycle through fractals
+    // Auto-cycle through parameter variations within current fractal
     if (autoCycle && !isMorphing) {
         cycleTimer += deltaTime;
         if (cycleTimer >= cycleInterval) {
             cycleTimer = 0.0f;
-            int nextFractal = (currentFractalType + 1) % 4;
-            switchFractal(nextFractal);
+            // Start new parameter variation within same fractal type
+            startMorphTo(currentFractalType);
         }
     }
     
@@ -200,12 +242,24 @@ void FractalExplorer::updateInterpolation(float deltaTime) {
     fractalParams.morphFactor += morphSpeed * deltaTime;
     
     if (fractalParams.morphFactor >= 1.0f) {
-        // Morphing complete
+        // Morphing complete - restart with new target
         fractalParams.morphFactor = 1.0f;
-        fractalParams = targetParams;
-        fractalParams.type = currentFractalType;
+        // Copy target parameters but keep the type unchanged
+        fractalParams.scale = targetParams.scale;
+        fractalParams.minRadius = targetParams.minRadius;
+        fractalParams.maxRadius = targetParams.maxRadius;
+        fractalParams.foldRadius = targetParams.foldRadius;
+        fractalParams.offset = targetParams.offset;
+        fractalParams.rotationAngle = targetParams.rotationAngle;
+        fractalParams.iterations = targetParams.iterations;
+        fractalParams.morphFactor = 1.0f;
         isMorphing = false;
-        std::cout << "Morph complete" << std::endl;
+        
+        // If auto-cycle is on, immediately start morphing to new parameters
+        if (autoCycle) {
+            cycleTimer = 0.0f;
+            startMorphTo(currentFractalType);
+        }
     } else {
         // Interpolate parameters
         float t = fractalParams.morphFactor;
@@ -260,13 +314,23 @@ void FractalExplorer::run() {
         else if (!window.isKeyPressed(GLFW_KEY_4)) key4Pressed = false;
         
         // Morph speed controls
-        if (window.isKeyPressed(GLFW_KEY_EQUAL)) {
-            morphSpeed += 1.0f * deltaTime;
-            if (morphSpeed > 5.0f) morphSpeed = 5.0f;
-        }
-        if (window.isKeyPressed(GLFW_KEY_MINUS)) {
-            morphSpeed -= 1.0f * deltaTime;
-            if (morphSpeed < 0.1f) morphSpeed = 0.1f;
+        {
+            float prevSpeed = morphSpeed;
+            if (window.isKeyPressed(GLFW_KEY_EQUAL)) {
+                morphSpeed += 1.0f * deltaTime;
+                if (morphSpeed > 5.0f) morphSpeed = 5.0f;
+            }
+            if (window.isKeyPressed(GLFW_KEY_MINUS)) {
+                morphSpeed -= 1.0f * deltaTime;
+                if (morphSpeed < 0.1f) morphSpeed = 0.1f;
+            }
+            if (fabsf(prevSpeed - morphSpeed) > 1e-4f) {
+                std::cout << "Morph speed: " << morphSpeed << std::endl;
+                // If not currently morphing, start a new parameter morph to reflect the new speed
+                if (!isMorphing) {
+                    startMorphTo(currentFractalType);
+                }
+            }
         }
         
         // Toggle auto-cycle

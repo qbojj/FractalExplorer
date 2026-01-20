@@ -3,6 +3,7 @@
 // Forward declare fractal functions
 __device__ float sceneSDF(float3 pos, const FractalParams& params);
 __device__ float3 calcNormal(float3 pos, const FractalParams& params, float eps);
+__device__ float3 orbitColor(float3 pos, const FractalParams& params);
 
 // ==================== Ray Marching ====================
 
@@ -37,8 +38,10 @@ __device__ float4 rayMarch(float3 origin, float3 direction, const FractalParams&
 __device__ float3 shade(float3 pos, float3 rayDir, const FractalParams& fractalParams, const RenderParams& renderParams) {
     float3 normal = calcNormal(pos, fractalParams, renderParams.epsilon * 10.0f);
     
-    // Base color
-    float3 baseColor = make_float3(0.8f, 0.8f, 0.7f);
+    // Orbit-based color (PySpace-inspired)
+    float3 baseColor = orbitColor(pos, fractalParams);
+    // Boost a little to avoid dark scenes
+    baseColor = clamp(baseColor + make_float3(0.1f, 0.1f, 0.1f), 0.0f, 1.0f);
     
     // Ambient
     float3 ambient = baseColor * renderParams.ambientStrength;

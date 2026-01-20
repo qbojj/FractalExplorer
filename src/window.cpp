@@ -1,21 +1,22 @@
-#include <GL/glew.h>
 #include "../include/window.h"
 #include <iostream>
 #include <cstring>
 
 Window::Window(int w, int h, const char* title)
-    : width(w), height(h), camera(w, h) {
+    : camera(w, h), width(w), height(h) {
     
-    // Initialize GLFW
+    // Check for display
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
+        std::cerr << "Make sure DISPLAY is set (echo $DISPLAY)" << std::endl;
         exit(1);
     }
     
-    // Create window
+    // Create window with compatibility profile for legacy OpenGL functions
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);  // Ensure window is visible
     
     window = glfwCreateWindow(width, height, title, nullptr, nullptr);
     if (!window) {
@@ -27,12 +28,11 @@ Window::Window(int w, int h, const char* title)
     glfwMakeContextCurrent(window);
     glfwSetWindowUserPointer(window, this);
     
-    // Initialize GLEW
-    glewExperimental = GL_TRUE;
-    if (glewInit() != GLEW_OK) {
-        std::cerr << "Failed to initialize GLEW" << std::endl;
-        exit(1);
-    }
+    // GLFW 3.x handles OpenGL loading automatically - no GLEW needed
+    // Print OpenGL info
+    std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
+    std::cout << "GLSL Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+    std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
     
     // Set callbacks
     glfwSetKeyCallback(window, keyCallback);

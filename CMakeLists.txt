@@ -9,7 +9,6 @@ set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90)
 
 # Find packages
 find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
 find_package(glfw3 REQUIRED)
 
 # Compiler flags
@@ -21,7 +20,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/include
     ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
     ${OPENGL_INCLUDE_DIRS}
-    ${GLEW_INCLUDE_DIRS}
 )
 
 # CUDA source files
@@ -53,7 +51,6 @@ add_executable(fractal-explorer
 
 target_link_libraries(fractal-explorer
     ${OPENGL_LIBRARIES}
-    GLEW::GLEW
     glfw
 )
 
