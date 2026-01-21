@@ -137,35 +137,41 @@ void FractalExplorer::switchFractal(int type) {
     fractalParams.type = type;
     isMorphing = false;
     
-    // Set base parameters for this fractal type
+    // Set base parameters for this fractal type (PySpace-aligned)
     switch (type) {
-        case 0: // Mandelbox
-            fractalParams.iterations = 12;
-            fractalParams.scale = 2.5f;
-            fractalParams.minRadius = 0.25f;
+        case 0: // Mandelbox: FoldBox(1.0) + FoldSphere(0.5,1.0) + FoldScaleOrigin(2.0), 16 iterations
+            fractalParams.iterations = 16;
+            fractalParams.scale = 2.0f;  // Not used in hardcoded DE but kept for consistency
+            fractalParams.minRadius = 0.5f;
             fractalParams.maxRadius = 1.0f;
             fractalParams.foldRadius = make_float3(1.0f, 1.0f, 1.0f);
-            std::cout << "Switched to Mandelbox" << std::endl;
+            fractalParams.offset = make_float3(0.0f, 0.0f, 0.0f);
+            fractalParams.rotationAngle = 0.0f;
+            std::cout << "Switched to Mandelbox (PySpace-aligned)" << std::endl;
             break;
             
-        case 1: // Menger
-            fractalParams.iterations = 5;
-            fractalParams.scale = 3.0f;
-            std::cout << "Switched to Menger Sponge" << std::endl;
+        case 1: // Menger: FoldAbs + FoldMenger + FoldScaleTranslate(3.0,-2,-2,0) + FoldPlane, 8 iterations
+            fractalParams.iterations = 8;
+            fractalParams.scale = 3.0f;  // Used in hardcoded DE
+            fractalParams.offset = make_float3(-2.0f, -2.0f, 0.0f);
+            fractalParams.rotationAngle = 0.0f;
+            std::cout << "Switched to Menger Sponge (PySpace-aligned)" << std::endl;
             break;
             
-        case 2: // Sierpinski
+        case 2: // Sierpinski: FoldSierpinski + FoldScaleTranslate(2, -1), 9 iterations
             fractalParams.iterations = 9;
-            fractalParams.scale = 2.4f;
-            std::cout << "Switched to Sierpinski Tetrahedron" << std::endl;
+            fractalParams.scale = 2.0f;  // Used in hardcoded DE
+            fractalParams.offset = make_float3(-1.0f, -1.0f, -1.0f);
+            fractalParams.rotationAngle = 0.0f;
+            std::cout << "Switched to Sierpinski Tetrahedron (PySpace-aligned)" << std::endl;
             break;
             
-        case 3: // Tree Planet
+        case 3: // Tree Planet: PySpace definition with parameter interpolation
             fractalParams.iterations = 30;
             fractalParams.scale = 1.3f;
             fractalParams.offset = make_float3(-2.0f, -4.8f, 0.0f);
             fractalParams.rotationAngle = 0.44f;
-            std::cout << "Switched to Tree Planet" << std::endl;
+            std::cout << "Switched to Tree Planet (PySpace-aligned)" << std::endl;
             break;
     }
     
@@ -179,43 +185,79 @@ void FractalExplorer::startMorphTo(int targetType) {
     sourceParams = fractalParams;
     sourceParams.morphFactor = 0.0f;
     
-    // Set target parameters - vary parameters within the same fractal type
+    // Set target parameters - rich parameter space exploration within fractal type
     targetParams = fractalParams;
     targetParams.morphFactor = 1.0f;
     
+    double t = window.getTime();
+    
     switch (targetType) {
-        case 0: // Mandelbox - vary scale and radii
-            targetParams.iterations = 12;
-            targetParams.scale = 3.0f + sinf((float)window.getTime() * 0.3f) * 0.5f;
-            targetParams.minRadius = 0.15f + cosf((float)window.getTime() * 0.4f) * 0.1f;
-            targetParams.maxRadius = 0.8f + sinf((float)window.getTime() * 0.5f) * 0.3f;
+        case 0: { // Mandelbox - explore fold radius space and sphere radii
+            targetParams.iterations = 16;
+            // Vary minRadius and maxRadius for different fold characteristics
+            float minRadTarget = 0.3f + sinf((float)t * 0.18f) * 0.2f;  // 0.1 to 0.5
+            float maxRadTarget = 0.7f + cosf((float)t * 0.22f) * 0.3f;  // 0.4 to 1.0
+            targetParams.minRadius = clamp(minRadTarget, 0.1f, 0.8f);
+            targetParams.maxRadius = clamp(maxRadTarget, minRadTarget + 0.1f, 1.2f);
+            
+            // Vary fold radius asymmetrically
             targetParams.foldRadius = make_float3(
-                0.8f + sinf((float)window.getTime() * 0.2f) * 0.3f,
-                0.8f + cosf((float)window.getTime() * 0.25f) * 0.3f,
-                0.8f + sinf((float)window.getTime() * 0.3f) * 0.3f
+                1.0f + sinf((float)t * 0.19f) * 0.25f,
+                1.0f + cosf((float)t * 0.24f) * 0.25f,
+                1.0f + sinf((float)t * 0.31f) * 0.25f
             );
             break;
+        }
             
-        case 1: // Menger - vary scale/iterations for spacing
-            targetParams.iterations = 4 + (int)(sinf((float)window.getTime() * 0.18f) * 2.0f);
-            targetParams.scale = 2.6f + cosf((float)window.getTime() * 0.22f) * 0.6f;
-            break;
+        case 1: { // Menger - explore offset space and asymmetry
+            targetParams.iterations = 8;
+            targetParams.scale = 3.0f;
             
-        case 2: // Sierpinski - vary iterations and scale for air gaps
-            targetParams.iterations = 7 + (int)(sinf((float)window.getTime() * 0.3f) * 4.0f);
-            targetParams.scale = 2.2f + cosf((float)window.getTime() * 0.32f) * 0.45f;
-            break;
-            
-        case 3: // Tree Planet - closer to PySpace recipe
-            targetParams.iterations = 24 + (int)(sinf((float)window.getTime() * 0.22f) * 6.0f);
-            targetParams.scale = 1.25f + cosf((float)window.getTime() * 0.18f) * 0.15f;
-            targetParams.rotationAngle = 0.44f + sinf((float)window.getTime() * 0.35f) * 0.05f;
+            // Create varied offset patterns
+            float offsetAmp = 0.5f + sinf((float)t * 0.15f) * 0.2f;
             targetParams.offset = make_float3(
-                -2.0f + cosf((float)window.getTime() * 0.17f) * 0.2f,
-                -4.8f + sinf((float)window.getTime() * 0.19f) * 0.4f,
-                0.0f
+                -2.0f + sinf((float)t * 0.21f) * offsetAmp,
+                -2.0f + cosf((float)t * 0.25f) * offsetAmp,
+                sinf((float)t * 0.18f) * 0.4f
             );
             break;
+        }
+            
+        case 2: { // Sierpinski - explore scale variations and offset drift
+            targetParams.iterations = 9;
+            
+            // Smooth scale variation around base
+            targetParams.scale = 2.0f + sinf((float)t * 0.16f) * 0.3f;
+            
+            // Asymmetric offset drifts
+            float driftAmount = 0.4f + cosf((float)t * 0.12f) * 0.15f;
+            targetParams.offset = make_float3(
+                -1.0f + sinf((float)t * 0.19f) * driftAmount,
+                -1.0f + cosf((float)t * 0.23f) * driftAmount,
+                -1.0f + sinf((float)t * 0.27f) * driftAmount
+            );
+            break;
+        }
+            
+        case 3: { // Tree Planet - full parameter space exploration
+            targetParams.iterations = 30;
+            
+            // Scale breathing effect
+            targetParams.scale = 1.3f + sinf((float)t * 0.15f) * 0.08f;
+            
+            // Rotation variation creates dramatic visual changes
+            targetParams.rotationAngle = 0.44f + cosf((float)t * 0.28f) * 0.12f;
+            
+            // Offset creates positional drift with different frequency per axis
+            float offsetX = cosf((float)t * 0.17f) * 0.3f;
+            float offsetY = sinf((float)t * 0.19f) * 0.6f;
+            targetParams.offset = make_float3(
+                -2.0f + offsetX,
+                -4.8f + offsetY,
+                sinf((float)t * 0.14f) * 0.2f
+            );
+            break;
+        }
     }
     
     isMorphing = true;
@@ -313,15 +355,15 @@ void FractalExplorer::run() {
         if (window.isKeyPressed(GLFW_KEY_4) && !key4Pressed) { switchFractal(3); key4Pressed = true; }
         else if (!window.isKeyPressed(GLFW_KEY_4)) key4Pressed = false;
         
-        // Morph speed controls
+        // Morph speed controls (multiplicative)
         {
             float prevSpeed = morphSpeed;
-            if (window.isKeyPressed(GLFW_KEY_EQUAL)) {
-                morphSpeed += 1.0f * deltaTime;
+            if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT) || window.isKeyPressed(GLFW_KEY_RIGHT_SHIFT)) {
+                morphSpeed *= (1.0f + 1.5f * deltaTime);  // Multiply by 1 + 1.5*dt
                 if (morphSpeed > 5.0f) morphSpeed = 5.0f;
             }
-            if (window.isKeyPressed(GLFW_KEY_MINUS)) {
-                morphSpeed -= 1.0f * deltaTime;
+            if (window.isKeyPressed(GLFW_KEY_LEFT_CONTROL) || window.isKeyPressed(GLFW_KEY_RIGHT_CONTROL)) {
+                morphSpeed /= (1.0f + 1.5f * deltaTime);  // Divide by 1 + 1.5*dt
                 if (morphSpeed < 0.1f) morphSpeed = 0.1f;
             }
             if (fabsf(prevSpeed - morphSpeed) > 1e-4f) {

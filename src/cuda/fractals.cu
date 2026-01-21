@@ -97,15 +97,23 @@ __device__ inline void rotateX(float4& z, float angle) {
 
 __device__ float deMandelbox(float3 pos, const FractalParams& params) {
     float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+    const float boxSize = 1.0f;
+    const float minR = 0.5f;
+    const float maxR = 1.0f;
+    const float scale = 2.0f;
     
     for (int i = 0; i < params.iterations; i++) {
-        boxFold(z, params.foldRadius);
-        sphereFold(z, params.minRadius, params.maxRadius);
+        // FoldBox(1.0)
+        boxFold(z, make_float3(boxSize, boxSize, boxSize));
         
-        z.x = z.x * params.scale + params.offset.x;
-        z.y = z.y * params.scale + params.offset.y;
-        z.z = z.z * params.scale + params.offset.z;
-        z.w = z.w * fabsf(params.scale);
+        // FoldSphere(0.5, 1.0)
+        sphereFold(z, minR, maxR);
+        
+        // FoldScaleOrigin(2.0) - scale around origin
+        z.x = z.x * scale;
+        z.y = z.y * scale;
+        z.z = z.z * scale;
+        z.w = z.w * scale;
     }
     
     float r = sqrtf(z.x * z.x + z.y * z.y + z.z * z.z);
@@ -114,39 +122,44 @@ __device__ float deMandelbox(float3 pos, const FractalParams& params) {
 
 __device__ float deMenger(float3 pos, const FractalParams& params) {
     float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+    const float scale = 3.0f;
+    const float3 translate = make_float3(-2.0f, -2.0f, 0.0f);
     
     for (int i = 0; i < params.iterations; i++) {
+        // FoldAbs()
         absFold(z);
+        
+        // FoldMenger()
         mengerFold(z);
         
-        // Slightly smaller offset to open gaps
-        z.x = z.x * 3.0f - 1.7f;
-        z.y = z.y * 3.0f - 1.7f;
-        z.z = z.z * 3.0f - 1.7f;
-        z.w = z.w * 3.0f;
+        // FoldScaleTranslate(3.0, (-2,-2,0))
+        z.x = z.x * scale + translate.x;
+        z.y = z.y * scale + translate.y;
+        z.z = z.z * scale + translate.z;
+        z.w = z.w * scale;
         
-        if (i < params.iterations - 1) {
-            if (z.x < -1.0f) z.x += 2.0f;
-            if (z.y < -1.0f) z.y += 2.0f;
-            if (z.z < -1.0f) z.z += 2.0f;
-        }
+        // FoldPlane((0,0,-1), -1)
+        planeFold(z, make_float3(0.0f, 0.0f, -1.0f), -1.0f);
     }
     
     float r = sqrtf(z.x * z.x + z.y * z.y + z.z * z.z);
-    return (r - 1.5f) / fabsf(z.w);
+    return (r - 2.0f) / fabsf(z.w);
 }
 
 __device__ float deSierpinski(float3 pos, const FractalParams& params) {
     float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+    const float scale = 2.0f;
+    const float offset = -1.0f;
     
     for (int i = 0; i < params.iterations; i++) {
+        // FoldSierpinski()
         sierpinskiFold(z);
         
-        // Push vertices out a bit more to leave air
-        z.x = z.x * 2.0f - 1.3f;
-        z.y = z.y * 2.0f - 1.3f;
-        z.z = z.z * 2.0f - 1.3f;
-        z.w = z.w * 2.0f;
+        // FoldScaleTranslate(2, -1)
+        z.x = z.x * scale + offset;
+        z.y = z.y * scale + offset;
+        z.z = z.z * scale + offset;
+        z.w = z.w * scale;
     }
     
     float r = sqrtf(z.x * z.x + z.y * z.y + z.z * z.z);
@@ -198,61 +211,80 @@ __device__ float sceneSDF(float3 pos, const FractalParams& params) {
 __device__ float3 orbitColor(float3 pos, const FractalParams& params) {
     float3 orbit = make_float3(1e20f, 1e20f, 1e20f);
 
-    if (params.type == 3) { // Tree Planet: follow PySpace ordering
+    if (params.type == 0) { // Mandelbox: PySpace-aligned
         float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
-        const float3 orbitScale = make_float3(0.24f, 2.28f, 7.6f);
+        const float boxSize = 1.0f;
+        const float minR = 0.5f;
+        const float maxR = 1.0f;
+        const float scale = 2.0f;
+        
         for (int i = 0; i < params.iterations; i++) {
-            rotateY(z, 0.44f);
+            boxFold(z, make_float3(boxSize, boxSize, boxSize));
+            sphereFold(z, minR, maxR);
+            // Track minimum absolute values
+            orbit.x = fminf(orbit.x, fabsf(z.x));
+            orbit.y = fminf(orbit.y, fabsf(z.y));
+            orbit.z = fminf(orbit.z, fabsf(z.z));
+            // Scale
+            z.x = z.x * scale;
+            z.y = z.y * scale;
+            z.z = z.z * scale;
+            z.w = z.w * scale;
+        }
+    } else if (params.type == 1) { // Menger: PySpace-aligned
+        float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+        const float scale = 3.0f;
+        const float3 translate = make_float3(-2.0f, -2.0f, 0.0f);
+        
+        for (int i = 0; i < params.iterations; i++) {
             absFold(z);
             mengerFold(z);
-            // OrbitMinAbs
+            // Track minimum absolute values
+            orbit.x = fminf(orbit.x, fabsf(z.x));
+            orbit.y = fminf(orbit.y, fabsf(z.y));
+            orbit.z = fminf(orbit.z, fabsf(z.z));
+            z.x = z.x * scale + translate.x;
+            z.y = z.y * scale + translate.y;
+            z.z = z.z * scale + translate.z;
+            z.w = z.w * scale;
+            planeFold(z, make_float3(0.0f, 0.0f, -1.0f), -1.0f);
+        }
+    } else if (params.type == 2) { // Sierpinski: PySpace-aligned
+        float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+        const float scale = 2.0f;
+        const float offset = -1.0f;
+        
+        for (int i = 0; i < params.iterations; i++) {
+            sierpinskiFold(z);
+            // Track minimum absolute values
+            orbit.x = fminf(orbit.x, fabsf(z.x));
+            orbit.y = fminf(orbit.y, fabsf(z.y));
+            orbit.z = fminf(orbit.z, fabsf(z.z));
+            z.x = z.x * scale + offset;
+            z.y = z.y * scale + offset;
+            z.z = z.z * scale + offset;
+            z.w = z.w * scale;
+        }
+    } else if (params.type == 3) { // Tree Planet: PySpace-aligned
+        float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+        const float3 orbitScale = make_float3(0.24f, 2.28f, 7.6f);
+        const float rot = params.rotationAngle;
+        const float s = params.scale;
+        const float3 t = params.offset;
+        
+        for (int i = 0; i < params.iterations; i++) {
+            rotateY(z, rot);
+            absFold(z);
+            mengerFold(z);
+            // OrbitMinAbs with scaling
             orbit.x = fminf(orbit.x, fabsf(z.x * orbitScale.x));
             orbit.y = fminf(orbit.y, fabsf(z.y * orbitScale.y));
             orbit.z = fminf(orbit.z, fabsf(z.z * orbitScale.z));
-            // Scale/translate and plane fold as in DE
-            z.x = z.x * 1.3f - 2.0f;
-            z.y = z.y * 1.3f - 4.8f;
-            z.z = z.z * 1.3f;
-            z.w = z.w * fabsf(1.3f);
+            z.x = z.x * s + t.x;
+            z.y = z.y * s + t.y;
+            z.z = z.z * s + t.z;
+            z.w = z.w * fabsf(s);
             planeFold(z, make_float3(0.0f, 0.0f, -1.0f), 0.0f);
-        }
-    } else if (params.type == 1) { // Menger: min abs after fold
-        float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
-        for (int i = 0; i < params.iterations; i++) {
-            absFold(z);
-            mengerFold(z);
-            orbit.x = fminf(orbit.x, fabsf(z.x));
-            orbit.y = fminf(orbit.y, fabsf(z.y));
-            orbit.z = fminf(orbit.z, fabsf(z.z));
-            z.x = z.x * params.scale - 2.0f;
-            z.y = z.y * params.scale - 2.0f;
-            z.z = z.z * params.scale - 2.0f;
-            z.w = z.w * params.scale;
-        }
-    } else if (params.type == 2) { // Sierpinski: abs min after fold
-        float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
-        for (int i = 0; i < params.iterations; i++) {
-            sierpinskiFold(z);
-            orbit.x = fminf(orbit.x, fabsf(z.x));
-            orbit.y = fminf(orbit.y, fabsf(z.y));
-            orbit.z = fminf(orbit.z, fabsf(z.z));
-            z.x = z.x * 2.0f - 1.3f;
-            z.y = z.y * 2.0f - 1.3f;
-            z.z = z.z * 2.0f - 1.3f;
-            z.w = z.w * 2.0f;
-        }
-    } else { // Mandelbox
-        float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
-        for (int i = 0; i < params.iterations; i++) {
-            boxFold(z, params.foldRadius);
-            sphereFold(z, params.minRadius, params.maxRadius);
-            orbit.x = fminf(orbit.x, fabsf(z.x));
-            orbit.y = fminf(orbit.y, fabsf(z.y));
-            orbit.z = fminf(orbit.z, fabsf(z.z));
-            z.x = z.x * params.scale + params.offset.x;
-            z.y = z.y * params.scale + params.offset.y;
-            z.z = z.z * params.scale + params.offset.z;
-            z.w = z.w * fabsf(params.scale);
         }
     }
 
