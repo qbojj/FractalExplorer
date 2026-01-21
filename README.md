@@ -2,8 +2,6 @@
 
 Real-time GPU-accelerated fractal visualization using CUDA and ray marching with signed distance functions (SDFs). Explore infinite 3D fractal landscapes with interactive camera controls.
 
-**This is a CUDA implementation inspired by PySpace's fractal ray marching approach.**
-
 ## Features
 
 - **Real-time CUDA Ray Marching** - 60+ FPS at 1280x720

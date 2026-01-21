@@ -188,7 +188,7 @@ __device__ float deTreePlanet(float3 pos, const FractalParams& params) {
         z.z = z.z * s + t.z;
         z.w = z.w * fabsf(s);
 
-        // FoldPlane((0,0,-1), 0) matches PySpace: reflect when dot(z,n) - d < 0
+        // FoldPlane((0,0,-1), 0)
         planeFold(z, make_float3(0.0f, 0.0f, -1.0f), 0.0f);
     }
     
@@ -268,11 +268,11 @@ __device__ float sceneSDF(float3 pos, const FractalParams& params) {
     }
 }
 
-// Orbit coloring approximations (PySpace-inspired)
+// Orbit coloring approximations
 __device__ float3 orbitColor(float3 pos, const FractalParams& params) {
     float3 orbit = make_float3(1e20f, 1e20f, 1e20f);
 
-    if (params.type == 0) { // Mandelbox: PySpace-aligned
+    if (params.type == 0) { // Mandelbox
         float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
         const float boxSize = 1.0f;
         const float minR = 0.5f;
@@ -292,7 +292,7 @@ __device__ float3 orbitColor(float3 pos, const FractalParams& params) {
             z.z = z.z * scale;
             z.w = z.w * scale;
         }
-    } else if (params.type == 1) { // Menger: PySpace-aligned
+    } else if (params.type == 1) { // Menger
         float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
         const float scale = 3.0f;
         const float3 translate = make_float3(-2.0f, -2.0f, 0.0f);
@@ -310,7 +310,7 @@ __device__ float3 orbitColor(float3 pos, const FractalParams& params) {
             z.w = z.w * scale;
             planeFold(z, make_float3(0.0f, 0.0f, -1.0f), -1.0f);
         }
-    } else if (params.type == 2) { // Sierpinski: PySpace-aligned
+    } else if (params.type == 2) { // Sierpinski
         float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
         const float scale = 2.0f;
         const float offset = -1.0f;
@@ -326,7 +326,7 @@ __device__ float3 orbitColor(float3 pos, const FractalParams& params) {
             z.z = z.z * scale + offset;
             z.w = z.w * scale;
         }
-    } else if (params.type == 3) { // Tree Planet: PySpace-aligned
+    } else if (params.type == 3) { // Tree Planet
         float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
         const float3 orbitScale = make_float3(0.24f, 2.28f, 7.6f);
         const float rot = params.rotationAngle;

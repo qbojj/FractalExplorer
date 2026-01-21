@@ -8,37 +8,50 @@ __device__ float3 orbitColor(float3 pos, const FractalParams& params);
 // ==================== Ray Marching ====================
 
 __device__ float4 rayMarch(float3 origin, float3 direction, const FractalParams& fractalParams, const RenderParams& renderParams) {
-    float t = 0.0f;
-    float minDist = 1e10f;
+    float totalDist = 0.0f;  // Total distance traveled
+    float d = renderParams.minDist;  // Current distance estimate
+    float stepCount = 0.0f;  // Fractional step count
+    float minD = 1.0f;  // Minimum normalized distance for glow
     
-    for (int i = 0; i < renderParams.maxSteps; i++) {
-        float3 pos = origin + direction * t;
-        float dist = sceneSDF(pos, fractalParams);
+    for (; stepCount < (float)renderParams.maxSteps; stepCount += 1.0f) {
+        float3 pos = origin + direction * totalDist;
+        d = sceneSDF(pos, fractalParams);
         
-        minDist = fminf(minDist, dist);
+        // Adaptive minimum distance based on total distance (LOD optimization)
+        float adaptiveMinDist = renderParams.minDist * fmaxf(totalDist * renderParams.lodMultiplier, 1.0f);
         
-        if (dist < renderParams.epsilon) {
-            // Hit! Return distance, step count, and min distance
-            return make_float4(t, (float)i, t, minDist);
+        if (d < adaptiveMinDist) {
+            // Hit! Add fractional step for smooth step counting
+            stepCount += d / renderParams.minDist;
+            // Return: (totalDist, stepCount, totalDist, minD)
+            return make_float4(totalDist, stepCount, totalDist, minD);
         }
         
-        t += dist;
-        
-        if (t > renderParams.maxDist) {
+        if (totalDist > renderParams.maxDist) {
             break;
         }
+        
+        // Update minimum normalized distance for glow effects
+        // Normalize by total distance traveled
+        if (totalDist > 0.0f) {
+            minD = fminf(minD, renderParams.glowSharpness * d / totalDist);
+        }
+        
+        // March forward by distance estimate (sphere tracing)
+        totalDist += d;
     }
     
-    // Miss
-    return make_float4(-1.0f, (float)renderParams.maxSteps, t, minDist);
+    // Miss - return negative distance to indicate no hit
+    // Return: (hit=-1, stepCount, totalDist, minD)
+    return make_float4(-1.0f, stepCount, totalDist, minD);
 }
 
 // ==================== Shading ====================
 
 __device__ float3 shade(float3 pos, float3 rayDir, const FractalParams& fractalParams, const RenderParams& renderParams) {
-    float3 normal = calcNormal(pos, fractalParams, renderParams.epsilon * 10.0f);
+    float3 normal = calcNormal(pos, fractalParams, renderParams.minDist * 10.0f);
     
-    // Orbit-based color (PySpace-inspired)
+    // Orbit-based color
     float3 baseColor = orbitColor(pos, fractalParams);
     // Boost a little to avoid dark scenes
     baseColor = clamp(baseColor + make_float3(0.1f, 0.1f, 0.1f), 0.0f, 1.0f);
@@ -57,7 +70,7 @@ __device__ float3 shade(float3 pos, float3 rayDir, const FractalParams& fractalP
     
     // Simple shadow (optional - can be disabled for performance)
     float shadow = 1.0f;
-    float3 shadowOrigin = pos + normal * renderParams.epsilon * 20.0f;
+    float3 shadowOrigin = pos + normal * renderParams.minDist * 20.0f;
     float4 shadowResult = rayMarch(shadowOrigin, renderParams.lightDir, fractalParams, renderParams);
     if (shadowResult.x > 0.0f) {
         shadow = 0.3f;

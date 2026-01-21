@@ -67,9 +67,11 @@ FractalExplorer::FractalExplorer(int w, int h)
     fractalParams.targetIterations = 12;
     
     // Initialize rendering parameters
-    renderParams.maxSteps = 512;
+    renderParams.maxSteps = 1000;
     renderParams.maxDist = 50.0f;
-    renderParams.epsilon = 1e-5f;
+    renderParams.minDist = 0.00001f;
+    renderParams.lodMultiplier = 10.0f;
+    renderParams.glowSharpness = 8.0f;
     renderParams.lightDir = normalize(make_float3(0.5f, 1.0f, 0.3f));
     renderParams.backgroundColor = make_float3(0.05f, 0.05f, 0.1f);
     renderParams.ambientStrength = 0.2f;
@@ -137,7 +139,7 @@ void FractalExplorer::switchFractal(int type) {
     fractalParams.type = type;
     isMorphing = false;
     
-    // Set base parameters for this fractal type (PySpace-aligned)
+    // Set base parameters for this fractal type
     switch (type) {
         case 0: // Mandelbox: FoldBox(1.0) + FoldSphere(0.5,1.0) + FoldScaleOrigin(2.0), 16 iterations
             fractalParams.iterations = 16;
@@ -147,7 +149,7 @@ void FractalExplorer::switchFractal(int type) {
             fractalParams.foldRadius = make_float3(1.0f, 1.0f, 1.0f);
             fractalParams.offset = make_float3(0.0f, 0.0f, 0.0f);
             fractalParams.rotationAngle = 0.0f;
-            std::cout << "Switched to Mandelbox (PySpace-aligned)" << std::endl;
+            std::cout << "Switched to Mandelbox" << std::endl;
             break;
             
         case 1: // Menger: FoldAbs + FoldMenger + FoldScaleTranslate(3.0,-2,-2,0) + FoldPlane, 8 iterations
@@ -155,7 +157,7 @@ void FractalExplorer::switchFractal(int type) {
             fractalParams.scale = 3.0f;  // Used in hardcoded DE
             fractalParams.offset = make_float3(-2.0f, -2.0f, 0.0f);
             fractalParams.rotationAngle = 0.0f;
-            std::cout << "Switched to Menger Sponge (PySpace-aligned)" << std::endl;
+            std::cout << "Switched to Menger Sponge" << std::endl;
             break;
             
         case 2: // Sierpinski: FoldSierpinski + FoldScaleTranslate(2, -1), 9 iterations
@@ -163,15 +165,15 @@ void FractalExplorer::switchFractal(int type) {
             fractalParams.scale = 2.0f;  // Used in hardcoded DE
             fractalParams.offset = make_float3(-1.0f, -1.0f, -1.0f);
             fractalParams.rotationAngle = 0.0f;
-            std::cout << "Switched to Sierpinski Tetrahedron (PySpace-aligned)" << std::endl;
+            std::cout << "Switched to Sierpinski Tetrahedron" << std::endl;
             break;
             
-        case 3: // Tree Planet: PySpace definition with parameter interpolation
+        case 3: // Tree Planet
             fractalParams.iterations = 30;
             fractalParams.scale = 1.3f;
             fractalParams.offset = make_float3(-2.0f, -4.8f, 0.0f);
             fractalParams.rotationAngle = 0.44f;
-            std::cout << "Switched to Tree Planet (PySpace-aligned)" << std::endl;
+            std::cout << "Switched to Tree Planet" << std::endl;
             break;
             
         case 4: // Butterweed Hills: OrbitSum coloring with rotation
@@ -179,7 +181,7 @@ void FractalExplorer::switchFractal(int type) {
             fractalParams.scale = 1.5f;
             fractalParams.offset = make_float3(-1.0f, -0.5f, -0.2f);
             fractalParams.rotationAngle = 0.0f;
-            std::cout << "Switched to Butterweed Hills (PySpace-aligned)" << std::endl;
+            std::cout << "Switched to Butterweed Hills" << std::endl;
             break;
             
         case 5: // Mausoleum: OrbitMax coloring
@@ -187,7 +189,7 @@ void FractalExplorer::switchFractal(int type) {
             fractalParams.scale = 3.28f;
             fractalParams.offset = make_float3(-5.27f, -0.34f, 0.0f);
             fractalParams.rotationAngle = 0.0f;
-            std::cout << "Switched to Mausoleum (PySpace-aligned)" << std::endl;
+            std::cout << "Switched to Mausoleum" << std::endl;
             break;
             
         case 6: // Snow Stadium: Complex rotational fractal
@@ -195,7 +197,7 @@ void FractalExplorer::switchFractal(int type) {
             fractalParams.scale = 1.57f;
             fractalParams.offset = make_float3(-6.61f, -4.0f, -2.42f);
             fractalParams.rotationAngle = 0.0f;
-            std::cout << "Switched to Snow Stadium (PySpace-aligned)" << std::endl;
+            std::cout << "Switched to Snow Stadium" << std::endl;
             break;
     }
     

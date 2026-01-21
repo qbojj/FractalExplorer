@@ -135,9 +135,11 @@ struct FractalParams {
 
 // Rendering parameters
 struct RenderParams {
-    int maxSteps;
-    float maxDist;
-    float epsilon;
+    int maxSteps;           // MAX_MARCHES (default: 1000)
+    float maxDist;          // MAX_DIST (default: 50.0)
+    float minDist;          // MIN_DIST (default: 0.00001)
+    float lodMultiplier;    // LOD_MULTIPLIER (default: 10.0)
+    float glowSharpness;    // GLOW_SHARPNESS for min distance tracking
     float3 lightDir;
     float3 backgroundColor;
     float ambientStrength;
