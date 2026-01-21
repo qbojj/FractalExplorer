@@ -21,6 +21,9 @@ public:
     void setMoveRight(bool moving) { moveRight = moving; }
     void setMoveUp(bool moving) { moveUp = moving; }
     void setMoveDown(bool moving) { moveDown = moving; }
+
+    void setMoveSpeed(float speed) { moveSpeed = speed; }
+    float getMoveSpeed() const { return moveSpeed; }
     
 private:
     void updateTransform();

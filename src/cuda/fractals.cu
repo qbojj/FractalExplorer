@@ -197,12 +197,73 @@ __device__ float deTreePlanet(float3 pos, const FractalParams& params) {
     return (r - 4.8f) / fabsf(z.w);
 }
 
+__device__ float deButterweedHills(float3 pos, const FractalParams& params) {
+    float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+    const float s = 1.5f;
+    const float3 t = make_float3(-1.0f, -0.5f, -0.2f);
+    
+    for (int i = 0; i < params.iterations; i++) {
+        absFold(z);
+        z.x = z.x * s + t.x;
+        z.y = z.y * s + t.y;
+        z.z = z.z * s + t.z;
+        z.w = z.w * s;
+        rotateX(z, 3.61f);
+        rotateY(z, 2.03f);
+    }
+    
+    float r = sqrtf(z.x * z.x + z.y * z.y + z.z * z.z);
+    return (r - 1.0f) / fabsf(z.w);
+}
+
+__device__ float deMausoleum(float3 pos, const FractalParams& params) {
+    float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+    const float s = 3.28f;
+    const float3 t = make_float3(-5.27f, -0.34f, 0.0f);
+    
+    for (int i = 0; i < params.iterations; i++) {
+        boxFold(z, make_float3(0.34f, 0.34f, 0.34f));
+        mengerFold(z);
+        z.x = z.x * s + t.x;
+        z.y = z.y * s + t.y;
+        z.z = z.z * s + t.z;
+        z.w = z.w * s;
+        rotateX(z, 1.5708f);  // pi/2
+    }
+    
+    float r = sqrtf(z.x * z.x + z.y * z.y + z.z * z.z);
+    return (r - 2.0f) / fabsf(z.w);
+}
+
+__device__ float deSnowStadium(float3 pos, const FractalParams& params) {
+    float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+    const float s = 1.57f;
+    const float3 t = make_float3(-6.61f, -4.0f, -2.42f);
+    
+    for (int i = 0; i < params.iterations; i++) {
+        rotateY(z, 3.33f);
+        sierpinskiFold(z);
+        rotateX(z, 0.15f);
+        mengerFold(z);
+        z.x = z.x * s + t.x;
+        z.y = z.y * s + t.y;
+        z.z = z.z * s + t.z;
+        z.w = z.w * s;
+    }
+    
+    float r = sqrtf(z.x * z.x + z.y * z.y + z.z * z.z);
+    return (r - 4.8f) / fabsf(z.w);
+}
+
 __device__ float sceneSDF(float3 pos, const FractalParams& params) {
     switch (params.type) {
         case 0: return deMandelbox(pos, params);
         case 1: return deMenger(pos, params);
         case 2: return deSierpinski(pos, params);
         case 3: return deTreePlanet(pos, params);
+        case 4: return deButterweedHills(pos, params);
+        case 5: return deMausoleum(pos, params);
+        case 6: return deSnowStadium(pos, params);
         default: return deMandelbox(pos, params);
     }
 }
@@ -285,6 +346,59 @@ __device__ float3 orbitColor(float3 pos, const FractalParams& params) {
             z.z = z.z * s + t.z;
             z.w = z.w * fabsf(s);
             planeFold(z, make_float3(0.0f, 0.0f, -1.0f), 0.0f);
+        }
+    } else if (params.type == 4) { // Butterweed Hills: OrbitSum (additive)
+        float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+        orbit = make_float3(0.0f, 0.0f, 0.0f);  // OrbitInitZero
+        const float3 orbitScale = make_float3(0.5f, 0.03f, 0.0f);
+        
+        for (int i = 0; i < params.iterations; i++) {
+            absFold(z);
+            z.x = z.x * 1.5f - 1.0f;
+            z.y = z.y * 1.5f - 0.5f;
+            z.z = z.z * 1.5f - 0.2f;
+            z.w = z.w * 1.5f;
+            // OrbitSum: additive accumulation
+            orbit.x += z.x * orbitScale.x;
+            orbit.y += z.y * orbitScale.y;
+            orbit.z += z.z * orbitScale.z;
+            rotateX(z, 3.61f);
+            rotateY(z, 2.03f);
+        }
+    } else if (params.type == 5) { // Mausoleum: OrbitMax
+        float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+        orbit = make_float3(0.0f, 0.0f, 0.0f);  // OrbitInitZero
+        const float3 orbitScale = make_float3(0.42f, 0.38f, 0.19f);
+        
+        for (int i = 0; i < params.iterations; i++) {
+            boxFold(z, make_float3(0.34f, 0.34f, 0.34f));
+            mengerFold(z);
+            z.x = z.x * 3.28f - 5.27f;
+            z.y = z.y * 3.28f - 0.34f;
+            z.z = z.z * 3.28f;
+            z.w = z.w * 3.28f;
+            // OrbitMax: track maximum values
+            orbit.x = fmaxf(orbit.x, z.x * orbitScale.x);
+            orbit.y = fmaxf(orbit.y, z.y * orbitScale.y);
+            orbit.z = fmaxf(orbit.z, z.z * orbitScale.z);
+            rotateX(z, 1.5708f);
+        }
+    } else if (params.type == 6) { // Snow Stadium: OrbitMinAbs
+        float4 z = make_float4(pos.x, pos.y, pos.z, 1.0f);
+        
+        for (int i = 0; i < params.iterations; i++) {
+            rotateY(z, 3.33f);
+            sierpinskiFold(z);
+            rotateX(z, 0.15f);
+            mengerFold(z);
+            // OrbitMinAbs with unit scale
+            orbit.x = fminf(orbit.x, fabsf(z.x));
+            orbit.y = fminf(orbit.y, fabsf(z.y));
+            orbit.z = fminf(orbit.z, fabsf(z.z));
+            z.x = z.x * 1.57f - 6.61f;
+            z.y = z.y * 1.57f - 4.0f;
+            z.z = z.z * 1.57f - 2.42f;
+            z.w = z.w * 1.57f;
         }
     }
 

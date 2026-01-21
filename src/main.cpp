@@ -69,7 +69,7 @@ FractalExplorer::FractalExplorer(int w, int h)
     // Initialize rendering parameters
     renderParams.maxSteps = 512;
     renderParams.maxDist = 50.0f;
-    renderParams.epsilon = 1e-3f;
+    renderParams.epsilon = 1e-5f;
     renderParams.lightDir = normalize(make_float3(0.5f, 1.0f, 0.3f));
     renderParams.backgroundColor = make_float3(0.05f, 0.05f, 0.1f);
     renderParams.ambientStrength = 0.2f;
@@ -173,6 +173,30 @@ void FractalExplorer::switchFractal(int type) {
             fractalParams.rotationAngle = 0.44f;
             std::cout << "Switched to Tree Planet (PySpace-aligned)" << std::endl;
             break;
+            
+        case 4: // Butterweed Hills: OrbitSum coloring with rotation
+            fractalParams.iterations = 30;
+            fractalParams.scale = 1.5f;
+            fractalParams.offset = make_float3(-1.0f, -0.5f, -0.2f);
+            fractalParams.rotationAngle = 0.0f;
+            std::cout << "Switched to Butterweed Hills (PySpace-aligned)" << std::endl;
+            break;
+            
+        case 5: // Mausoleum: OrbitMax coloring
+            fractalParams.iterations = 8;
+            fractalParams.scale = 3.28f;
+            fractalParams.offset = make_float3(-5.27f, -0.34f, 0.0f);
+            fractalParams.rotationAngle = 0.0f;
+            std::cout << "Switched to Mausoleum (PySpace-aligned)" << std::endl;
+            break;
+            
+        case 6: // Snow Stadium: Complex rotational fractal
+            fractalParams.iterations = 30;
+            fractalParams.scale = 1.57f;
+            fractalParams.offset = make_float3(-6.61f, -4.0f, -2.42f);
+            fractalParams.rotationAngle = 0.0f;
+            std::cout << "Switched to Snow Stadium (PySpace-aligned)" << std::endl;
+            break;
     }
     
     // Reset morph to start new parameter exploration
@@ -255,6 +279,44 @@ void FractalExplorer::startMorphTo(int targetType) {
                 -2.0f + offsetX,
                 -4.8f + offsetY,
                 sinf((float)t * 0.14f) * 0.2f
+            );
+            break;
+        }
+            
+        case 4: { // Butterweed Hills - scale and offset variations
+            targetParams.iterations = 30;
+            targetParams.scale = 1.5f + sinf((float)t * 0.12f) * 0.1f;
+            targetParams.offset = make_float3(
+                -1.0f + cosf((float)t * 0.16f) * 0.2f,
+                -0.5f + sinf((float)t * 0.2f) * 0.15f,
+                -0.2f + cosf((float)t * 0.14f) * 0.1f
+            );
+            break;
+        }
+            
+        case 5: { // Mausoleum - box fold and offset modulation
+            targetParams.iterations = 8;
+            targetParams.scale = 3.28f + sinf((float)t * 0.1f) * 0.15f;
+            targetParams.foldRadius = make_float3(
+                0.34f + cosf((float)t * 0.18f) * 0.08f,
+                0.34f + sinf((float)t * 0.22f) * 0.08f,
+                0.34f + cosf((float)t * 0.26f) * 0.08f
+            );
+            targetParams.offset = make_float3(
+                -5.27f + sinf((float)t * 0.13f) * 0.4f,
+                -0.34f + cosf((float)t * 0.17f) * 0.2f,
+                0.0f
+            );
+            break;
+        }
+            
+        case 6: { // Snow Stadium - rotation and offset exploration
+            targetParams.iterations = 30;
+            targetParams.scale = 1.57f + cosf((float)t * 0.11f) * 0.05f;
+            targetParams.offset = make_float3(
+                -6.61f + sinf((float)t * 0.14f) * 0.5f,
+                -4.0f + cosf((float)t * 0.18f) * 0.3f,
+                -2.42f + sinf((float)t * 0.22f) * 0.3f
             );
             break;
         }
@@ -343,6 +405,8 @@ void FractalExplorer::run() {
         
         // Fractal switching
         static bool key1Pressed = false, key2Pressed = false, key3Pressed = false, key4Pressed = false;
+        static bool key5Pressed = false, key6Pressed = false, key7Pressed = false;
+        
         if (window.isKeyPressed(GLFW_KEY_1) && !key1Pressed) { switchFractal(0); key1Pressed = true; }
         else if (!window.isKeyPressed(GLFW_KEY_1)) key1Pressed = false;
         
@@ -355,14 +419,22 @@ void FractalExplorer::run() {
         if (window.isKeyPressed(GLFW_KEY_4) && !key4Pressed) { switchFractal(3); key4Pressed = true; }
         else if (!window.isKeyPressed(GLFW_KEY_4)) key4Pressed = false;
         
+        if (window.isKeyPressed(GLFW_KEY_5) && !key5Pressed) { switchFractal(4); key5Pressed = true; }
+        else if (!window.isKeyPressed(GLFW_KEY_5)) key5Pressed = false;
+        
+        if (window.isKeyPressed(GLFW_KEY_6) && !key6Pressed) { switchFractal(5); key6Pressed = true; }
+        else if (!window.isKeyPressed(GLFW_KEY_6)) key6Pressed = false;
+        
+        if (window.isKeyPressed(GLFW_KEY_7) && !key7Pressed) { switchFractal(6); key7Pressed = true; }
+        else if (!window.isKeyPressed(GLFW_KEY_7)) key7Pressed = false;
+        
         // Morph speed controls (multiplicative)
         {
             float prevSpeed = morphSpeed;
-            if (window.isKeyPressed(GLFW_KEY_LEFT_SHIFT) || window.isKeyPressed(GLFW_KEY_RIGHT_SHIFT)) {
+            if (window.isKeyPressed(GLFW_KEY_Q)) {
                 morphSpeed *= (1.0f + 1.5f * deltaTime);  // Multiply by 1 + 1.5*dt
-                if (morphSpeed > 5.0f) morphSpeed = 5.0f;
             }
-            if (window.isKeyPressed(GLFW_KEY_LEFT_CONTROL) || window.isKeyPressed(GLFW_KEY_RIGHT_CONTROL)) {
+            if (window.isKeyPressed(GLFW_KEY_E)) {
                 morphSpeed /= (1.0f + 1.5f * deltaTime);  // Divide by 1 + 1.5*dt
                 if (morphSpeed < 0.1f) morphSpeed = 0.1f;
             }
@@ -373,6 +445,21 @@ void FractalExplorer::run() {
                     startMorphTo(currentFractalType);
                 }
             }
+        }
+
+        // Move speed controls (multiplicative)
+        {
+            float prevSpeed = window.getCamera().getMoveSpeed();
+            float moveSpeed = prevSpeed;
+
+            if (window.isKeyPressed(GLFW_KEY_Z)) {
+                moveSpeed *= (1.0f + 1.5f * deltaTime);
+            }
+            if (window.isKeyPressed(GLFW_KEY_C)) {
+                moveSpeed /= (1.0f + 1.5f * deltaTime);
+            }
+
+            window.getCamera().setMoveSpeed(moveSpeed);
         }
         
         // Toggle auto-cycle

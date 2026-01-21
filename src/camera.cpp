@@ -106,3 +106,7 @@ void Camera::processMouseMove(double xpos, double ypos) {
 void Camera::processMouseButton(int button, int action) {
     // Can be used for click interactions if needed
 }
+
+void Camera::processKeyboard(int key, int action) {
+    // move speed (multiplicative)
+}
