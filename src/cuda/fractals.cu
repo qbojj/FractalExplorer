@@ -188,7 +188,6 @@ __device__ float deTreePlanet(float3 pos, const FractalParams& params) {
         z.z = z.z * s + t.z;
         z.w = z.w * fabsf(s);
 
-        // FoldPlane((0,0,-1), 0)
         planeFold(z, make_float3(0.0f, 0.0f, -1.0f), 0.0f);
     }
     

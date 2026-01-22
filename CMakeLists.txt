@@ -12,7 +12,7 @@ find_package(OpenGL REQUIRED)
 find_package(glfw3 REQUIRED)
 
 # Compiler flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -march=native -Wall -fopenmp")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3 --use_fast_math --expt-relaxed-constexpr")
 
 # Include directories
@@ -32,6 +32,7 @@ set(CUDA_SOURCES
 set(CPP_SOURCES
     src/camera.cpp
     src/window.cpp
+    src/cpu_raymarcher.cpp
 )
 
 # Main file (compiled with CUDA)

@@ -1,13 +1,14 @@
 #include "../include/window.h"
 #include "../include/types.h"
 #include "../include/raymarcher.h"
+#include "../include/cpu_raymarcher.h"
 #include <cuda_runtime.h>
 #include <iostream>
 #include <cstring>
 
 class FractalExplorer {
 public:
-    FractalExplorer(int width, int height);
+    FractalExplorer(int width, int height, bool useCPU = false);
     ~FractalExplorer();
     
     void run();
@@ -21,10 +22,14 @@ private:
     
     Window window;
     int width, height;
+    bool useCPU;  // Flag to use CPU or GPU rendering
     
     // CUDA resources
     uchar3* d_output;  // Device framebuffer
     uchar3* h_output;  // Host framebuffer
+    
+    // CPU rendering
+    CPURayMarcher* cpuRayMarcher;
     
     // Rendering parameters
     FractalParams fractalParams;
@@ -46,10 +51,18 @@ private:
     float cycleInterval = 5.0f;  // Seconds between auto-switches
 };
 
-FractalExplorer::FractalExplorer(int w, int h)
-    : window(w, h, "Fractal Explorer - CUDA Ray Marcher"), width(w), height(h) {
+FractalExplorer::FractalExplorer(int w, int h, bool useCPU)
+    : window(w, h, useCPU ? "Fractal Explorer - CPU Ray Marcher" : "Fractal Explorer - CUDA Ray Marcher"), 
+      width(w), height(h), useCPU(useCPU), cpuRayMarcher(nullptr) {
     
-    initCUDA();
+    if (!useCPU) {
+        initCUDA();
+    } else {
+        h_output = new uchar3[w * h];
+        cpuRayMarcher = new CPURayMarcher(w, h);
+        std::cout << "CPU ray marcher initialized" << std::endl;
+        std::cout << "Image size: " << w << "x" << h << std::endl;
+    }
     
     // Initialize fractal parameters for Mandelbox
     fractalParams.type = 0;
@@ -88,7 +101,12 @@ FractalExplorer::FractalExplorer(int w, int h)
 }
 
 FractalExplorer::~FractalExplorer() {
-    cudaFree(d_output);
+    if (!useCPU) {
+        cudaFree(d_output);
+    }
+    if (cpuRayMarcher) {
+        delete cpuRayMarcher;
+    }
     delete[] h_output;
 }
 
@@ -105,28 +123,34 @@ void FractalExplorer::initCUDA() {
 }
 
 void FractalExplorer::render() {
-    // Launch kernel
-    dim3 blockSize(16, 16);
-    dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
-                  (height + blockSize.y - 1) / blockSize.y);
-    
-    CameraParams camParams = window.getCamera().getParams();
-    
-    // Call kernel
-    renderKernel<<<gridSize, blockSize>>>(d_output, camParams, fractalParams, renderParams);
-    
-    // Check for errors
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess) {
-        std::cerr << "CUDA kernel error: " << cudaGetErrorString(err) << std::endl;
+    if (useCPU) {
+        // Render using CPU
+        cpuRayMarcher->render(h_output, window.getCamera().getParams(), fractalParams, renderParams);
+    } else {
+        // Render using CUDA
+        // Launch kernel
+        dim3 blockSize(16, 16);
+        dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
+                      (height + blockSize.y - 1) / blockSize.y);
+        
+        CameraParams camParams = window.getCamera().getParams();
+        
+        // Call kernel
+        renderKernel<<<gridSize, blockSize>>>(d_output, camParams, fractalParams, renderParams);
+        
+        // Check for errors
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "CUDA kernel error: " << cudaGetErrorString(err) << std::endl;
+        }
+        
+        // Wait for kernel to finish
+        cudaDeviceSynchronize();
+        
+        // Copy result to host
+        size_t imageSize = width * height * sizeof(uchar3);
+        cudaMemcpy(h_output, d_output, imageSize, cudaMemcpyDeviceToHost);
     }
-    
-    // Wait for kernel to finish
-    cudaDeviceSynchronize();
-    
-    // Copy result to host
-    size_t imageSize = width * height * sizeof(uchar3);
-    cudaMemcpy(h_output, d_output, imageSize, cudaMemcpyDeviceToHost);
     
     // Display
     window.display(h_output);
@@ -495,10 +519,20 @@ int main(int argc, char** argv) {
         height = std::atoi(argv[2]);
     }
     
+    // Check for --cpu flag
+    bool useCPU = false;
+    for (int i = 1; i < argc; i++) {
+        if (std::string(argv[i]) == "--cpu") {
+            useCPU = true;
+            break;
+        }
+    }
+    
     std::cout << "Starting Fractal Explorer..." << std::endl;
+    std::cout << "Mode: " << (useCPU ? "CPU" : "CUDA GPU") << std::endl;
     
     try {
-        FractalExplorer explorer(width, height);
+        FractalExplorer explorer(width, height, useCPU);
         explorer.run();
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
